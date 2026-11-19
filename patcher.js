@@ -1,89 +1,69 @@
-const GITHUB_OWNER = "Inca2026";
-const GITHUB_REPO = "Horizon-Mod-installer";
-const MODS_FOLDER = "mods";
-
-const modListEl = document.getElementById("modList");
-const dropZone = document.getElementById("dropZone");
+const htmlDrop = document.getElementById("htmlDrop");
 const htmlInput = document.getElementById("htmlInput");
-const fileLabel = document.getElementById("fileLabel");
+const htmlLabel = document.getElementById("htmlLabel");
+const modDrop = document.getElementById("modDrop");
+const modInput = document.getElementById("modInput");
+const modListEl = document.getElementById("modList");
 const downloadBtn = document.getElementById("downloadBtn");
 const launchBtn = document.getElementById("launchBtn");
 const statusEl = document.getElementById("status");
 
-let discoveredMods = [];
 let selectedHtmlFile = null;
+let selectedMods = [];
 
-function isModFile(name) {
-  const lower = name.toLowerCase();
-  return lower.endsWith(".hnmod") || lower.endsWith(".hmod");
+function setupDropZone(zone, input, onFiles) {
+  zone.addEventListener("click", () => input.click());
+  zone.addEventListener("dragover", (e) => { e.preventDefault(); zone.classList.add("dragover"); });
+  zone.addEventListener("dragleave", () => zone.classList.remove("dragover"));
+  zone.addEventListener("drop", (e) => {
+    e.preventDefault();
+    zone.classList.remove("dragover");
+    if (e.dataTransfer.files.length) onFiles(e.dataTransfer.files);
+  });
+  input.addEventListener("change", (e) => {
+    if (e.target.files.length) onFiles(e.target.files);
+    input.value = "";
+  });
 }
 
-async function loadRepoMods() {
-  const apiUrl = `https://github.com{GITHUB_OWNER}/${GITHUB_REPO}/contents/${MODS_FOLDER}`;
-  try {
-    const res = await fetch(apiUrl);
-    if (!res.ok) throw new Error(`HTTP ${res.status}`);
-    const files = await res.json();
-
-    discoveredMods = files
-      .filter((f) => f.type === "file" && isModFile(f.name))
-      .map((f) => ({
-        name: f.name,
-        url: `./${MODS_FOLDER}/${encodeURIComponent(f.name)}`
-      }));
-
-    renderModList();
-  } catch (err) {
-    // Fallback if ://github.com is blocked by a school/network filter:
-    // Check for a mods.json list in the repo or probe known files directly from github.io
-    try {
-      const listRes = await fetch(`./${MODS_FOLDER}/mods.json`);
-      if (listRes.ok) {
-        const names = await listRes.json();
-        discoveredMods = names.filter(isModFile).map((name) => ({
-          name,
-          url: `./${MODS_FOLDER}/${encodeURIComponent(name)}`
-        }));
-        renderModList();
-        return;
-      }
-    } catch (_) {}
-
-    modListEl.innerHTML = `<li class="empty">://github.com is blocked on this network. Add a <code>mods/mods.json</code> file containing <code>["atlas-0.3.0.hnmod"]</code>.</li>`;
-  }
+setupDropZone(htmlDrop, htmlInput, (files) => {
+  selectedHtmlFile = files;
+  htmlLabel.textContent = `1. Selected: ${selectedHtmlFile.name}`;
+  statusEl.textContent = "";
   updateButtons();
-}
+});
+
+setupDropZone(modDrop, modInput, (files) => {
+  for (const file of files) {
+    if (!selectedMods.some((m) => m.name === file.name)) {
+      selectedMods.push(file);
+    }
+  }
+  renderModList();
+  updateButtons();
+});
 
 function renderModList() {
-  modListEl.innerHTML = discoveredMods.length === 0
-    ? `<li class="empty">No .hnmod or .hmod files found in /${MODS_FOLDER} yet.</li>`
-    : discoveredMods.map((m) => `<li>+ ${m.name}</li>`).join("");
-  updateButtons();
+  modListEl.innerHTML = "";
+  selectedMods.forEach((file, index) => {
+    const li = document.createElement("li");
+    li.innerHTML = `<span>+ ${file.name}</span>`;
+    const removeBtn = document.createElement("button");
+    removeBtn.textContent = "Remove";
+    removeBtn.onclick = () => {
+      selectedMods.splice(index, 1);
+      renderModList();
+      updateButtons();
+    };
+    li.appendChild(removeBtn);
+    modListEl.appendChild(li);
+  });
 }
 
 function updateButtons() {
-  const ready = Boolean(selectedHtmlFile) && discoveredMods.length > 0;
+  const ready = Boolean(selectedHtmlFile) && selectedMods.length > 0;
   downloadBtn.disabled = !ready;
   launchBtn.disabled = !ready;
-}
-
-dropZone.addEventListener("click", () => htmlInput.click());
-dropZone.addEventListener("dragover", (e) => { e.preventDefault(); dropZone.classList.add("dragover"); });
-dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
-dropZone.addEventListener("drop", (e) => {
-  e.preventDefault();
-  dropZone.classList.remove("dragover");
-  if (e.dataTransfer.files) handleFileSelect(e.dataTransfer.files);
-});
-htmlInput.addEventListener("change", (e) => {
-  if (e.target.files) handleFileSelect(e.target.files);
-});
-
-function handleFileSelect(file) {
-  selectedHtmlFile = file;
-  fileLabel.textContent = `Selected: ${file.name}`;
-  statusEl.textContent = "";
-  updateButtons();
 }
 
 function arrayBufferToBase64(buffer) {
@@ -97,13 +77,14 @@ function arrayBufferToBase64(buffer) {
 }
 
 async function buildPatchedHtml() {
-  statusEl.textContent = "Fetching mods and bundling into HTML...";
+  statusEl.textContent = "Bundling mods into Horizon HTML...";
   const bundledMods = [];
 
-  for (const mod of discoveredMods) {
-    const res = await fetch(mod.url);
-    if (!res.ok) throw new Error(`Failed to fetch ${mod.name}`);
-    bundledMods.push({ name: mod.name, b64: arrayBufferToBase64(await res.arrayBuffer()) });
+  for (const file of selectedMods) {
+    bundledMods.push({
+      name: file.name,
+      b64: arrayBufferToBase64(await file.arrayBuffer())
+    });
   }
 
   const rawHtml = await selectedHtmlFile.text();
@@ -153,10 +134,10 @@ async function handleAction(mode) {
       a.download = selectedHtmlFile.name.replace(/\.html?$/i, "") + "-modded.html";
       a.click();
       URL.revokeObjectURL(url);
-      statusEl.textContent = `Done! Bundled ${discoveredMods.length} mod(s).`;
+      statusEl.textContent = `Done! Bundled ${selectedMods.length} mod(s).`;
     } else {
       window.open(url, "_blank");
-      statusEl.textContent = `Launched with ${discoveredMods.length} mod(s) in a new tab.`;
+      statusEl.textContent = `Launched with ${selectedMods.length} mod(s) in a new tab.`;
     }
   } catch (err) {
     statusEl.textContent = `Error: ${err.message}`;
@@ -167,5 +148,3 @@ async function handleAction(mode) {
 
 downloadBtn.addEventListener("click", () => handleAction("download"));
 launchBtn.addEventListener("click", () => handleAction("launch"));
-
-loadRepoMods();
