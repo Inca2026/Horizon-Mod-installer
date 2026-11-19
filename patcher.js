@@ -27,7 +27,7 @@ function setupDropZone(zone, input, onFiles) {
 }
 
 setupDropZone(htmlDrop, htmlInput, (files) => {
-  selectedHtmlFile = files;
+  selectedHtmlFile = files[0];
   htmlLabel.textContent = `1. Selected: ${selectedHtmlFile.name}`;
   statusEl.textContent = "";
   updateButtons();
