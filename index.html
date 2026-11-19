@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Horizon Mod Patcher</title>
+  <style>
+    :root {
+      --bg: #0f1117;
+      --card: #181b24;
+      --border: #2a2f3d;
+      --accent: #4ade80;
+      --accent-hover: #22c55e;
+      --text: #f3f4f6;
+      --muted: #9ca3af;
+    }
+    * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+    body {
+      margin: 0; min-height: 100vh; background: var(--bg); color: var(--text);
+      display: flex; align-items: center; justify-content: center; padding: 20px;
+    }
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      max-width: 520px; width: 100%; padding: 28px; box-shadow: 0 12px 32px rgba(0, 0, 0, 0.4);
+    }
+    h1 { margin: 0 0 8px; font-size: 1.5rem; }
+    p { margin: 0 0 20px; color: var(--muted); font-size: 0.95rem; line-height: 1.5; }
+    .mod-box {
+      background: #12141c; border: 1px solid var(--border);
+      border-radius: 10px; padding: 14px; margin-bottom: 20px;
+    }
+    .mod-box-title {
+      font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em;
+      color: var(--muted); margin-bottom: 8px;
+    }
+    #modList { list-style: none; padding: 0; margin: 0; font-size: 0.9rem; }
+    #modList li { padding: 4px 0; color: var(--accent); }
+    #modList li.empty { color: var(--muted); }
+    .drop-zone {
+      border: 2px dashed var(--border); border-radius: 10px; padding: 28px 16px;
+      text-align: center; cursor: pointer; transition: 0.2s; margin-bottom: 16px;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent); background: rgba(74, 222, 128, 0.05);
+    }
+    .drop-zone strong { display: block; margin-bottom: 4px; }
+    .drop-zone span { font-size: 0.85rem; color: var(--muted); }
+    .actions { display: flex; gap: 10px; }
+    button {
+      flex: 1; padding: 12px 16px; border: none; border-radius: 8px;
+      font-weight: 600; font-size: 0.95rem; cursor: pointer; transition: 0.2s;
+    }
+    button:disabled { opacity: 0.45; cursor: not-allowed; }
+    .btn-primary { background: var(--accent); color: #052e16; }
+    .btn-primary:hover:not(:disabled) { background: var(--accent-hover); }
+    .btn-secondary { background: #262b38; color: var(--text); }
+    .btn-secondary:hover:not(:disabled) { background: #323848; }
+    #status { margin-top: 14px; font-size: 0.88rem; color: var(--muted); min-height: 1.2em; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1>Horizon Mod Patcher</h1>
+    <p>Upload your <code>horizon.html</code> file to automatically inject all mods hosted in this repository.</p>
+
+    <div class="mod-box">
+      <div class="mod-box-title">Detected Mods in /mods</div>
+      <ul id="modList"><li class="empty">Scanning repository /mods folder...</li></ul>
+    </div>
+
+    <div class="drop-zone" id="dropZone">
+      <strong id="fileLabel">Click or drag your Horizon .html file here</strong>
+      <span>Your file stays in your browser and is never uploaded to a server</span>
+      <input type="file" id="htmlInput" accept=".html,.htm" hidden />
+    </div>
+
+    <div class="actions">
+      <button class="btn-primary" id="downloadBtn" disabled>Download Modded HTML</button>
+      <button class="btn-secondary" id="launchBtn" disabled>Launch in New Tab</button>
+    </div>
+
+    <div id="status"></div>
+  </div>
+  <script src="./patcher.js"></script>
+</body>
+</html>
